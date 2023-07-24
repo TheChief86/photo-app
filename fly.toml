@@ -1,4 +1,4 @@
-app = "photo-app-8011"
+app = "photo-app"
 kill_signal = "SIGINT"
 kill_timeout = 5
 processes = [ ]
