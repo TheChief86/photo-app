@@ -1,15 +1,21 @@
-import { Form, Link, Outlet } from "@remix-run/react";
-import { useState } from "react";
+import type { ActionArgs } from "@remix-run/node";
+import { Form, Link, Outlet, useFetcher } from "@remix-run/react";
 import { createPhoto } from "~/models/photo.server";
+import type { CreatePhotoInput } from "~/models/photo.server";
 
 import { useUser } from "~/utils";
 
-export default function PhotosPage() {
-  const [newPhoto, setNewPhoto] = useState('');
-  const [newPhotoFilename, setNewPhotoFilename] = useState('');
-  const user = useUser();
+export async function action({ request }: ActionArgs) {
+  const formData = await request.formData();
+  const newPhotoInputData = Object.fromEntries(formData) as CreatePhotoInput;
+  return await createPhoto(newPhotoInputData);
+};
 
-  const storePhotoLocal = async (
+export default function PhotosPage() {
+  const user = useUser();
+  const fetcher = useFetcher();
+
+  const uploadPhoto = async (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const { files } = e.target ?? {};
@@ -20,25 +26,16 @@ export default function PhotosPage() {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setNewPhoto(reader.result.toString());
-        setNewPhotoFilename(file.name);
+      const photoBase64Data = reader.result?.toString();
+      const fileName = file.name;
+      if (photoBase64Data) {
+        fetcher.submit({
+          userId: user.id,
+          data: photoBase64Data,
+          name: fileName,
+        }, { method: 'post' });
       }
     }
-  };
-
-  const uploadPhoto = async () => {
-    if (!newPhoto) {
-      return;
-    }
-    const photo = await createPhoto({
-      data: newPhoto,
-      name: newPhotoFilename,
-      userId: user.id,
-    });
-    setNewPhoto('');
-    setNewPhotoFilename('');
-    return photo;
   };
 
   return (
@@ -60,17 +57,15 @@ export default function PhotosPage() {
 
       <main className="flex h-full bg-white">
         <div className="flex-1 p-6">
-          <input type="file" id="fileUploader"
-            className="p-4 text-xl text-blue-500"
-            onChange={(e) => storePhotoLocal(e)} />
-          <button
-            className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 focus:bg-blue-400"
-            onClick={uploadPhoto}
-          >
-            Upload
-          </button>
+          <fetcher.Form>
+            <label htmlFor="filePicker" className="p-4 text-xl text-blue-500">
+              + Add Photo
+            </label>
+            <input type="file" id="filePicker" hidden
+              onChange={uploadPhoto} />
+          </fetcher.Form>
 
-          <hr />
+          <hr className="mt-4" />
 
           <Outlet />
         </div>

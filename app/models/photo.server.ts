@@ -6,6 +6,9 @@ export type { Photo } from "@prisma/client";
 
 export type GetPhotosRes = Awaited<ReturnType<typeof getPhotos>>;
 export type SinglePhotoRes = GetPhotosRes[0];
+export type CreatePhotoInput = Pick<Photo, "data" | "name"> & {
+  userId: User["id"];
+}
 
 export function getPhoto({
   id,
@@ -31,9 +34,7 @@ export function createPhoto({
   data,
   name,
   userId,
-}: Pick<Photo, "data" | "name"> & {
-  userId: User["id"];
-}) {
+}: CreatePhotoInput) {
   return prisma.photo.create({
     data: {
       name,
